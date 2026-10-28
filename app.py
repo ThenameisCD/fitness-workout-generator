@@ -1,4 +1,5 @@
 import os
+import re
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -77,10 +78,11 @@ def validate_plan_response(plan: str) -> str:
     if not plan or not plan.strip():
         raise ValueError("Groq returned an empty workout plan.")
 
-    required_headings = [f"Day {day}" for day in range(1, 8)]
-    missing_headings = [
-        heading for heading in required_headings if heading not in plan
-    ]
+    day_headings = set(
+        re.findall(r"(?m)^#{1,6}\s+(Day\s+[1-7])(?:\s|$)", plan)
+    )
+    required_headings = {f"Day {day}" for day in range(1, 8)}
+    missing_headings = required_headings - day_headings
 
     if missing_headings:
         raise ValueError(
