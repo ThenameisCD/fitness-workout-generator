@@ -43,7 +43,8 @@ Requirements:
 - Avoid prescribing exercises that load or stress the affected area.
 - Do not claim that a substitute exercise is medically safe.
 - If an injury or limitation is reported, advise the user to confirm exercise choices with a qualified health professional before following the plan.
-- For each workout day, include exactly 3 exercises per workout day.
+- Include exactly 4 main exercises on each workout day.
+- Keep each session practical and reasonably sized; avoid unnecessary exercises.
 - List each exercise on one line with sets, reps, and rest time.
 - Keep the warm-up and cooldown to one brief line each.
 - Do not use tables, HTML, introductions, or extra explanations.
@@ -132,7 +133,7 @@ def generate_workout_plan(
                 {"role": "user", "content": prompt},
             ],
             temperature=0.4,
-            max_tokens=7000,
+            max_tokens=5000,
         )
         choice = completion.choices[0]
         plan = choice.message.content
