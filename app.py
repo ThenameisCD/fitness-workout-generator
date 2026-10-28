@@ -139,6 +139,12 @@ def generate_workout_plan(
         raise ValueError("The plan reached Groq's output limit. Try a shorter plan or a higher output limit."
         )
     return validate_plan_response(plan)
+
+
+if "last_plan" not in st.session_state:
+    st.session_state["last_plan"] = ""
+
+
 with st.form("workout_form"):
     goal = st.selectbox(
         "Fitness goal",
@@ -176,10 +182,13 @@ if submitted:
                 injuries,
             )
 
-        st.subheader("Your workout plan")
-        st.markdown(plan)
+        st.session_state["last_plan"] = plan
     except ValueError as error:
         st.warning(str(error))
     except RuntimeError as error:
         st.error(str(error))
+
+if st.session_state["last_plan"]:
+    st.subheader("Your workout plan")
+    st.markdown(st.session_state["last_plan"])
     
