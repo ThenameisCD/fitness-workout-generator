@@ -15,6 +15,12 @@ st.title("Workout Plan Generator")
 st.caption("A practical weekly plan shaped around your goals, experience, schedule, and equipment.")
 
 
+def calculate_schedule(days_available: int) -> tuple[int, int]:
+    workout_days = min(days_available, 5)
+    rest_days = 7 - workout_days
+    return workout_days, rest_days
+
+
 def build_workout_prompt(
     goal: str,
     experience_level: str,
@@ -23,12 +29,15 @@ def build_workout_prompt(
     injuries: str,
 ) -> str:
     limitations = injuries.strip() or "None reported"
+    workout_days, rest_days = calculate_schedule(days_per_week)
 
     return f"""
 Create a realistic weekly workout plan for this person:
 - Fitness goal: {goal}
 - Experience level: {experience_level}
 - Maximum days available for training: {days_per_week}
+- Recommended workout days: {workout_days}
+- Required rest/recovery days: {rest_days}
 - Available equipment: {equipment}
 - Injuries or limitations: {limitations}
 
@@ -36,7 +45,7 @@ Requirements:
 - Provide a full 7-day schedule labelled Day 1 through Day 7.
 - Choose exercises appropriate for the experience level and available equipment.
 - For each workout day, include a warm-up, exercises with sets and reps or duration, rest guidance, and a cooldown.
-- Schedule no more than {days_per_week} workout days; label all other days Rest/Recovery.
+- Schedule exactly {workout_days} workout days and exactly {rest_days} Rest/Recovery days.
 - Respect the stated limitations. Do not claim to diagnose or treat an injury.
 - If limitations are reported, include a brief reminder to seek advice from a qualified professional.
 - Treat reported injuries or limitations as safety constraints; do not assume an exercise is safe for that person.
