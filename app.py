@@ -6,9 +6,15 @@ from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
-st.set_page_config(page_title="Workout Plan Generator")
+st.set_page_config(
+    page_title="Workout Plan Generator",
+    page_icon="🏋️",
+    layout="centered",
+)
 st.title("Workout Plan Generator")
-st.write("Welcome! We'll build your personalized workout planner here.")
+st.caption("A practical weekly plan shaped around your goals, experience, schedule, and equipment.")
+
+
 def build_workout_prompt(
     goal: str,
     experience_level: str,
@@ -145,28 +151,33 @@ if "last_plan" not in st.session_state:
     st.session_state["last_plan"] = ""
 
 
+st.subheader("Tell us about your training")
 with st.form("workout_form"):
-    goal = st.selectbox(
-        "Fitness goal",
-        ["Build muscle", "Lose fat", "General fitness", "Improve endurance"],
-    )
-    experience_level = st.selectbox(
-        "Experience level",
-        ["Beginner", "Intermediate", "Advanced"],
-    )
-    days_per_week = st.slider(
-        "Days available per week",
-        min_value=1,
-        max_value=7,
-        value=3,
-    )
-    equipment = st.selectbox(
-        "Equipment access",
-        ["No equipment", "Home dumbbells", "Full gym"],
-    )
+    first_column, second_column = st.columns(2)
+    with first_column:
+        goal = st.selectbox(
+            "Fitness goal",
+            ["Build muscle", "Lose fat", "General fitness", "Improve endurance"],
+        )
+        experience_level = st.selectbox(
+            "Experience level",
+            ["Beginner", "Intermediate", "Advanced"],
+        )
+    with second_column:
+        days_per_week = st.slider(
+            "Days available per week",
+            min_value=1,
+            max_value=7,
+            value=3,
+        )
+        equipment = st.selectbox(
+            "Equipment access",
+            ["No equipment", "Home dumbbells", "Full gym"],
+        )
     injuries = st.text_area(
         "Injuries or limitations (optional)",
         placeholder="Example: bad knees, no overhead pressing",
+        help="Describe limitations briefly. The generated plan is not medical advice.",
     )
 
     submitted = st.form_submit_button("Generate Plan")
@@ -189,6 +200,13 @@ if submitted:
         st.error(str(error))
 
 if st.session_state["last_plan"]:
+    st.divider()
     st.subheader("Your workout plan")
     st.markdown(st.session_state["last_plan"])
+    st.download_button(
+        "Download plan as Markdown",
+        data=st.session_state["last_plan"],
+        file_name="workout-plan.md",
+        mime="text/markdown",
+    )
     

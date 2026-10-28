@@ -6,7 +6,8 @@ A Streamlit app that generates a weekly workout plan from structured fitness inp
 
 - Collects fitness goal, experience level, available training days, equipment, and optional limitations.
 - Builds a prompt from those inputs and requests a plan from Groq.
-- Displays the plan and shows friendly messages for common request failures.
+- Displays the plan, preserves it across reruns, and lets users download it as Markdown.
+- Shows friendly messages for common request failures and incomplete responses.
 
 ## Setup
 
