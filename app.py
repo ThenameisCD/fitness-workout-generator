@@ -78,6 +78,11 @@ def build_user_prompt(
     equipment: str,
     limitations: str,
 ) -> str:
+    """Build the per-request (user) prompt from the selected inputs.
+
+    The system prompt holds the stable rules; this holds today's order.
+    Limitations are wrapped in <<< >>> so the model treats them as data.
+    """
     workout_days, rest_days = calculate_schedule(days_per_week)
     return f"""
 Create a weekly workout plan for this person:
@@ -98,6 +103,7 @@ def validate_inputs(
     equipment: str,
     limitations: str,
 ) -> None:
+    """Validate the form inputs; raise ValueError with a friendly message if invalid."""
     if goal not in GOALS:
         raise ValueError("Please select a fitness goal.")
     if experience_level not in LEVELS:
@@ -113,6 +119,7 @@ def validate_inputs(
 
 
 def validate_plan_response(plan: Optional[str]) -> str:
+    """Validate the LLM response contains Day 1..7 headings; return the trimmed plan."""
     if not plan or not plan.strip():
         raise ValueError("The AI returned an empty plan. Please try again.")
 
@@ -131,6 +138,7 @@ def generate_workout_plan(
     equipment: str,
     injuries: str,
 ) -> str:
+    """Validate inputs, build the prompt, call Groq, and return a validated plan."""
     limitations = injuries.strip()
     validate_inputs(goal, experience_level, days_per_week, equipment, limitations)
 
@@ -184,6 +192,7 @@ def swap_exercise_in_plan(
     equipment: str,
     injuries: str,
 ) -> str:
+    """Swap one exercise throughout the plan via a follow-up Groq call."""
     if not exercise_to_replace.strip():
         raise ValueError("Please enter an exercise to swap.")
     limitations = injuries.strip()
