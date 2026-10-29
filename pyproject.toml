@@ -2,6 +2,7 @@
 name = "fitness-workout-generator"
 version = "0.1.0"
 description = "Workout plan generator using Streamlit and Groq"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "streamlit",
