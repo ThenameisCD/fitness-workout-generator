@@ -54,7 +54,7 @@ SAFETY RULES
   days write only "Complete rest." After Day 7, add one final plain line (not a
   heading) advising the user to confirm the plan with a qualified professional.
 - A limitation on a body part or joint applies to every exercise that loads or
-  moves it, including warm-ups and cardio. For knee or leg limitations this
+  moves it. For knee or leg limitations this
   means no squats, lunges, step-ups, deadlift variants with deep knee bend,
   jumping, running, cycling, rowing, elliptical, treadmill, stair machines, or any kneeling or hands-and-knees position (such as bird dog). For knee or leg limitations, every warm-up must be upper-body mobility only (such as arm circles or shoulder rolls), or an arm bike only when the user has full gym access; never a rowing machine, elliptical, treadmill, or leg bike. For shoulder
   limitations this means no overhead or heavy pressing movements. Before
@@ -176,6 +176,67 @@ def generate_workout_plan(
     return validate_plan_response(choice.message.content)
 
 
+def swap_exercise_in_plan(
+    plan: str,
+    exercise_to_replace: str,
+    goal: str,
+    experience_level: str,
+    equipment: str,
+    injuries: str,
+) -> str:
+    if not exercise_to_replace.strip():
+        raise ValueError("Please enter an exercise to swap.")
+    limitations = injuries.strip()
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY is missing from your .env file.")
+
+    user_prompt = (
+        "Here is a weekly workout plan:\n\n"
+        + plan
+        + "\n\nReplace every occurrence of the exercise \""
+        + exercise_to_replace.strip()
+        + "\" with a different exercise that fits the same slot, respecting:\n"
+        + "- Fitness goal: " + goal + "\n"
+        + "- Experience level: " + experience_level + "\n"
+        + "- Equipment: " + equipment + "\n"
+        + "- Injuries or limitations: " + (limitations or "None reported") + "\n\n"
+        + "Keep the rest of the plan identical (same structure, same number of exercises per day, "
+        + "same sets/reps/rest format). Return the full updated plan in the same Markdown format "
+        + "with Day 1 to Day 7 headings."
+    )
+
+    try:
+        client = Groq(api_key=api_key)
+        completion = client.chat.completions.create(
+            model=os.getenv("GROQ_MODEL", DEFAULT_MODEL),
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4,
+            max_tokens=5000,
+            reasoning_effort="low",
+        )
+    except AuthenticationError as exc:
+        raise RuntimeError("Groq rejected your API key. Check GROQ_API_KEY.") from exc
+    except RateLimitError as exc:
+        raise RuntimeError("Groq rate limit reached. Wait a minute and retry.") from exc
+    except APIConnectionError as exc:
+        raise RuntimeError("Could not reach Groq. Check your internet connection.") from exc
+    except APIStatusError as exc:
+        raise RuntimeError(
+            f"Groq returned an error (status {exc.status_code}). Please try again."
+        ) from exc
+
+    if not completion.choices:
+        raise ValueError("The AI returned no response. Please try again.")
+    choice = completion.choices[0]
+    if choice.finish_reason == "length":
+        raise ValueError("The plan was cut off by the output limit. Please try again.")
+    return validate_plan_response(choice.message.content)
+
+
 # ------------------------------- UI -------------------------------
 st.set_page_config(page_title="Workout Plan Generator", page_icon="ðŸ‹ï¸", layout="centered")
 st.title("Workout Plan Generator")
@@ -183,6 +244,7 @@ st.caption("A practical weekly plan shaped around your goals, experience, schedu
 
 st.session_state.setdefault("last_plan", "")
 st.session_state.setdefault("last_had_limitations", False)
+st.session_state.setdefault("last_inputs", None)
 
 st.subheader("Tell us about your training")
 with st.form("workout_form"):
@@ -208,12 +270,54 @@ if submitted:
                 goal, experience_level, days_per_week, equipment, injuries
             )
         st.session_state["last_had_limitations"] = bool(injuries.strip())
+        st.session_state["last_inputs"] = {
+            "goal": goal,
+            "experience_level": experience_level,
+            "days_per_week": days_per_week,
+            "equipment": equipment,
+            "injuries": injuries,
+        }
     except ValueError as error:
         st.warning(str(error))
     except RuntimeError as error:
         st.error(str(error))
     except Exception:  # last safety net: the app must never show a crash screen
         st.error("Something unexpected went wrong. Please try again.")
+
+if st.session_state["last_plan"] and st.session_state.get("last_inputs"):
+    inp = st.session_state["last_inputs"]
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("Regenerate plan"):
+            try:
+                with st.spinner("Regenerating your workout plan..."):
+                    st.session_state["last_plan"] = generate_workout_plan(
+                        inp["goal"], inp["experience_level"], inp["days_per_week"],
+                        inp["equipment"], inp["injuries"],
+                    )
+                st.session_state["last_had_limitations"] = bool(inp["injuries"].strip())
+            except ValueError as error:
+                st.warning(str(error))
+            except RuntimeError as error:
+                st.error(str(error))
+            except Exception:
+                st.error("Something unexpected went wrong. Please try again.")
+    with col_b:
+        with st.expander("Swap an exercise"):
+            swap_name = st.text_input("Exercise to replace", key="swap_exercise_name")
+            if st.button("Swap exercise"):
+                try:
+                    with st.spinner("Swapping exercise..."):
+                        st.session_state["last_plan"] = swap_exercise_in_plan(
+                            st.session_state["last_plan"], swap_name,
+                            inp["goal"], inp["experience_level"], inp["equipment"], inp["injuries"],
+                        )
+                except ValueError as error:
+                    st.warning(str(error))
+                except RuntimeError as error:
+                    st.error(str(error))
+                except Exception:
+                    st.error("Something unexpected went wrong. Please try again.")
 
 if st.session_state["last_plan"]:
     st.divider()
@@ -225,9 +329,18 @@ if st.session_state["last_plan"]:
             "with a qualified health professional before following it."
         )
     st.markdown(st.session_state["last_plan"])
-    st.download_button(
-        "Download plan as Markdown",
-        data=st.session_state["last_plan"],
-        file_name="workout-plan.md",
-        mime="text/markdown",
-    )
+    dl_col1, dl_col2 = st.columns(2)
+    with dl_col1:
+        st.download_button(
+            "Download plan as Markdown",
+            data=st.session_state["last_plan"],
+            file_name="workout-plan.md",
+            mime="text/markdown",
+        )
+    with dl_col2:
+        st.download_button(
+            "Download plan as Text",
+            data=st.session_state["last_plan"],
+            file_name="workout-plan.txt",
+            mime="text/plain",
+        )
