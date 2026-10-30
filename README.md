@@ -4,12 +4,16 @@ A Streamlit app that generates a weekly workout plan from structured fitness inp
 
 ## Features
 
-- Collects fitness goal, experience level, available training days, equipment, and optional limitations.
+- Collects fitness goal, experience level, available training days, equipment, and optional limitations (checkbox + free text).
 - Builds a prompt from those inputs and requests a plan from Groq.
 - Displays the plan, preserves it across reruns, and lets users download it as Markdown or Text.
 - Regenerates a plan variation with one click.
 - Swaps a single exercise in the current plan on demand.
 - Shows friendly messages for common request failures and incomplete responses.
+- "Regenerate plan" button for a new variation, and "Swap an exercise" to replace one exercise throughout the plan.
+- Download the plan as Markdown or plain text.
+- A checkbox enables the injury/limitation box; if inputs change after a plan is generated, the old plan is hidden and the user is asked to click Generate Plan again.
+- The Generate Plan button is disabled while a current plan is showing; use Regenerate for a new variation, or change an input to enable Generate again.
 
 ## Project structure
 
@@ -92,6 +96,9 @@ Scenarios I ran with a real Groq key:
 - No equipment, Advanced, 7 days, bad knees: 5 workout days and 2 rest days, upper-body bodyweight work with no bands, bikes or benches and no kneeling moves. One exercise (doorway pull-ups) still implied a bar.
 - Full gym, 7 days, bad knees: upper-body exercises only, warm-ups limited to arm and shoulder mobility.
 - Home dumbbells, 7 days, no limitation: no injury notice or blue box shown.
+- Regenerate and Swap exercise: both worked with a real Groq key; swapping a name that is not in the plan shows a message without calling the API.
+- Generate Plan is disabled while a current plan is showing and is enabled again when an input changes.
+- Download as Markdown and as plain text both worked.
 
 ## Prompt iterations
 
@@ -108,6 +115,7 @@ Scenarios I ran with a real Groq key:
 - With a vague limitation like bad knees, the plan avoids all lower-body work, so it may be less balanced.
 - On Groq free plan, generating plans back to back can hit the per-minute token limit.
 - Equipment and joint rules are enforced by the prompt only, so a rare slip (for example doorway pull-ups, which need a bar, under No equipment) can still occur; the app does not check exercise names.
+- Regenerate and Swap each make another Groq request, so quick repeated clicks can hit the free-plan per-minute limit; Swap relies on the model to keep the rest of the plan unchanged, and the app only re-checks the Day 1 to 7 structure.
 
 ## Safety note
 
